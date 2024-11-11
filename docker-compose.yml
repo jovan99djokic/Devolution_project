@@ -1,0 +1,58 @@
+services:
+
+  yak-server:
+    image: guardiandevelopment/yak-server:1.0.0.SNAPSHOT
+    ports:
+      - 9000:9000
+      - 9001:9001
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 250M
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    container_name: cadvisor
+    privileged: true
+    ports:
+      - "8080:8080"  # 
+    volumes:
+      - /:/rootfs:ro  
+      - /var/run/docker.sock:/var/run/docker.sock 
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /dev/disk:/dev/disk:ro
+
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    ports:
+      - "9100:9100"  # Expose Node Exporter metrics on port 9100
+
+  prom:
+    image: prom/prometheus:v2.27.1
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prom/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prom/rules.yml:/etc/prometheus/rules.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:8.5.5
+    ports:
+      - 3000:3000
+    volumes:
+    - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    - ./grafana/config.ini:/etc/grafana/config.ini
+    - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+volumes:
+  # store prom metrics between runs
+  prometheus_data: {}
+
+networks:
+  default:
+    name: metrics-network
